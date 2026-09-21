@@ -1,40 +1,35 @@
-import streamlit as st
-import mysql.connector
+﻿import streamlit as st
 
-def connect_db():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="Admin",
-        database="house_price_prediction"
-    )
+from accounts import AccountError, authenticate
 
-st.title("🔐 Login")
 
-username = st.text_input("Username")
-password = st.text_input("Password", type="password")
+def show_login():
+    st.title("🔐 Login")
+    if st.session_state.pop("account_created", False):
+        st.success("Account created! Please log in.")
 
-if st.button("Login"):
+    with st.form("login_form"):
+        username = st.text_input("Username", max_chars=30)
+        password = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Login")
 
-    conn = connect_db()
-    cursor = conn.cursor()
+    if submitted:
+        try:
+            authenticated_username = authenticate(username, password)
+        except AccountError as exc:
+            st.error(str(exc))
+        else:
+            st.session_state.logged_in = True
+            st.session_state.username = authenticated_username
+            if st.session_state.get("page") not in {"home", "predict", "profile"}:
+                st.session_state.page = "home"
+            st.switch_page("app.py")
 
-    cursor.execute("SELECT username, password FROM users WHERE username=%s", (username,))
-    user = cursor.fetchone()
-
-    if user is None:
-        st.error("User not found")
-
-    elif user[1] != password:
-        st.error("Incorrect password")
-
-    else:
-        st.session_state.logged_in = True
-        st.session_state.username = user[0]
-        st.success("Login successful")
+    st.page_link("pages/register.py", label="Create Account")
+    if st.button("Back to Home"):
+        st.session_state.page = "home"
         st.switch_page("app.py")
 
-    cursor.close()
-    conn.close()
 
-st.page_link("pages/register.py", label="Create Account")
+if __name__ == "__main__":
+    show_login()

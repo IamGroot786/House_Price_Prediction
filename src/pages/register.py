@@ -1,36 +1,29 @@
-import streamlit as st
-import mysql.connector
+﻿import streamlit as st
 
-def connect_db():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="Admin",
-        database="house_price_prediction"
-    )
+from accounts import AccountError, register_account
 
-st.title("📝 Register")
 
-username = st.text_input("Username")
-password = st.text_input("Password", type="password")
+def show_register():
+    st.title("📝 Register")
+    with st.form("register_form"):
+        username = st.text_input("Username", max_chars=30)
+        password = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Register")
 
-if st.button("Register"):
+    if submitted:
+        try:
+            register_account(username, password)
+        except AccountError as exc:
+            st.error(str(exc))
+        else:
+            st.session_state.account_created = True
+            st.switch_page("pages/login.py")
 
-    conn = connect_db()
-    cursor = conn.cursor()
+    st.page_link("pages/login.py", label="Already have an account? Log in")
+    if st.button("Back to Home"):
+        st.session_state.page = "home"
+        st.switch_page("app.py")
 
-    cursor.execute("SELECT * FROM users WHERE username=%s", (username,))
-    if cursor.fetchone():
-        st.error("Username already exists")
 
-    else:
-        cursor.execute(
-            "INSERT INTO users (username, password) VALUES (%s, %s)",
-            (username, password)
-        )
-        conn.commit()
-        st.success("Account created! Please login.")
-        st.switch_page("pages/login.py")
-
-    cursor.close()
-    conn.close()
+if __name__ == "__main__":
+    show_register()
